@@ -44,7 +44,7 @@ class EncoderLayer(nn.Module):
         self.dropout = nn.Dropout(dropout_probability)
         
     def _linear_projection(self, X):
-        W = nn.Linear(X.size(-1), self.head_dim)
+        W = nn.Linear(X.size(-1), self.head_dim, bias=False)
         return W(X)
         
     def forward(self, input_tensors):
@@ -77,7 +77,7 @@ class DecoderLayer(nn.Module):
         self.dropout = nn.Dropout(dropout_probability)
         
     def _linear_projection(self, X):
-        W = nn.Linear(X.size(-1), self.head_dim)
+        W = nn.Linear(X.size(-1), self.head_dim, bias=False)
         return W(X)
     
     def forward(self, encoder_output, decoder_input):
@@ -96,5 +96,49 @@ class DecoderLayer(nn.Module):
         output = self.layer_norm_3(feed_forward_output + attention_vectors)
         
         return output
+    
+class Encoder(nn.Module):
+    def __init__(self, embed_dim, num_of_layers, seq_len, num_of_heads, dropout_proba=0.1):
+        super(Encoder, self).__init__()
+        self.num_of_layers = num_of_layers
+        self.encoder_layers = nn.ModuleList([EncoderLayer(embed_dim, num_of_heads, seq_len, dropout_proba) for _ in range(num_of_layers)])
+    
+    def forward(self, source_embeddings):
+        output = source_embeddings
+        for encoder_layer in self.encoder_layers:
+            output = encoder_layer(output)
+        return output
+    
+class Decoder(nn.Module):
+    def __init__(self, vocab_size, embed_dim, num_of_layers, seq_len, num_of_heads, dropout_proba=0.1):
+        super(Decoder, self).__init__()
+        self.num_of_layers = num_of_layers
+        self.decoder_layers = nn.ModuleList([DecoderLayer(embed_dim, num_of_heads, seq_len, dropout_proba) for _ in range(num_of_layers)])
+        self.linear = nn.Linear(embed_dim, vocab_size)
+
+    def forward(self, encoder_output, target_embeddings):
+        output = target_embeddings
+        for decoder_layer in self.decoder_layers:
+            output = decoder_layer(encoder_output, output)
+        return nn.functional.log_softmax(self.linear(output), dim=-1)
+    
+class Transformer(nn.Module):
+    def __init__(self, vocab_size, embed_dim, num_of_layers, seq_len, num_of_heads, dropout_proba=0.1):
+        super(Transformer, self).__init__()
+        self.embeddings = EmbeddingLayer(vocab_size, embed_dim, seq_len, dropout_proba)
+        self.encoder = Encoder(embed_dim, num_of_layers, seq_len, num_of_heads, dropout_proba)
+        self.decoder = Decoder(vocab_size, embed_dim, num_of_layers, seq_len, num_of_heads, dropout_proba)
+        self.linear = nn.Linear(embed_dim, vocab_size)
+        
+    def forward(self, source, target):
+        source_embeddings = self.embeddings(source)
+        target_embeddings = self.embeddings(target)
+        encoder_output = self.encoder(source_embeddings)
+        decoder_output = self.decoder(encoder_output, target_embeddings)
+        output = self.linear(decoder_output)
+        return output
+    
+    def get_num_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
 

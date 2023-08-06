@@ -29,17 +29,17 @@ class MultiHeadAttention(nn.Module):
     def __init__(self, model_dim, head_dim, num_of_heads, seq_length, dropout_probability, masked=True):
         super(MultiHeadAttention, self).__init__()
         self.head_dim = head_dim
-        self.W_q = nn.Linear(model_dim, self.head_dim)
-        self.W_k = nn.Linear(model_dim, self.head_dim)
-        self.W_v = nn.Linear(model_dim, self.head_dim)
+        self.W_q = nn.Linear(model_dim, self.head_dim, bias=False)
+        self.W_k = nn.Linear(model_dim, self.head_dim, bias=False)
+        self.W_v = nn.Linear(model_dim, self.head_dim, bias=False)
     
         self.attention_heads = nn.ModuleList(Attention(seq_length, dropout_probability, masked) 
                                              for _ in range(num_of_heads))
-        self.W_o = nn.Linear(num_of_heads*self.head_dim, model_dim)
+        self.W_o = nn.Linear(num_of_heads*self.head_dim, model_dim, bias=False)
         self.dropout = nn.Dropout(dropout_probability)
         
     def _linear_projection(self, X):
-        W = nn.Linear(X.size(-1), self.head_dim)
+        W = nn.Linear(X.size(-1), self.head_dim, bias=False)
         return W(X)
         
     def forward(self, keys, queries, values):
