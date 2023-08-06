@@ -26,11 +26,9 @@ class Attention(nn.Module):
         return attention_vectors
     
 class MultiHeadAttention(nn.Module):
-    def __init__(self, model_dim, num_of_heads, seq_length, dropout_probability, masked=True):
+    def __init__(self, model_dim, head_dim, num_of_heads, seq_length, dropout_probability, masked=True):
         super(MultiHeadAttention, self).__init__()
-        assert model_dim % num_of_heads == 0, f"model_dim {model_dim} is not divisible by num_of_heads {num_of_heads}"
-        
-        self.head_dim = int(model_dim / num_of_heads)
+        self.head_dim = head_dim
         self.W_q = nn.Linear(model_dim, self.head_dim)
         self.W_k = nn.Linear(model_dim, self.head_dim)
         self.W_v = nn.Linear(model_dim, self.head_dim)
